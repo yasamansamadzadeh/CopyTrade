@@ -106,6 +106,7 @@ class SignUpForm(UserCreationForm):
         key = self.cleaned_data.get('key')
         if key and Trader.objects.filter(kc_key=key).exists():
             raise ValidationError("Key already exists")
+        return key
 
     class Meta:
         model = User
