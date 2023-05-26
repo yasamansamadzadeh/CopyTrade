@@ -7,6 +7,7 @@ Copyright (c) 2019 - present AppSeed.us
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from .forms import LoginForm, SignUpForm
+from ..trade.models import Trader
 
 
 def login_view(request):
@@ -42,6 +43,14 @@ def register_user(request):
             username = form.cleaned_data.get("username")
             raw_password = form.cleaned_data.get("password1")
             user = authenticate(username=username, password=raw_password)
+
+            Trader.objects.create(
+                user=user,
+                is_master=form.cleaned_data.get('master', False),
+                kc_key=form.cleaned_data.get('key'),
+                kc_secret=form.cleaned_data.get('secret'),
+                kc_passphrase=form.cleaned_data.get('passphrase'),
+            )
 
             msg = 'User created - please <a href="/login">login</a>.'
             success = True
