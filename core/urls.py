@@ -10,6 +10,7 @@ admin.site.index_title = _('Welcome to Administration Panel')
 
 urlpatterns = [
     path('admin/', admin.site.urls),        # Django admin route
+    path("", include("apps.trade.urls")),
     path("", include("apps.myauth.urls")),    # Auth routes - login / register
-    path("", include("apps.home.urls"))     # UI Kits Html files
+    path("", include("apps.home.urls")),     # UI Kits Html files
 ]

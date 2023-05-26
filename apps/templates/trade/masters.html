@@ -1,0 +1,61 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} UI Tables {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header card-header-primary">
+                    <h4 class="card-title ">Top Traders</h4>
+                    <p class="card-category"> Here is a list of top traders you can follow</p>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead class=" text-primary">
+                            <th>
+                                ID
+                            </th>
+                            <th>
+                                Name
+                            </th>
+                            <th></th>
+                            </thead>
+                            <tbody>
+                            {% for master in masters %}
+                                <tr>
+                                    <td>
+                                        {{ master.id }}
+                                    </td>
+                                    <td>
+                                        {{ master.user.username }}
+                                    </td>
+                                    <td>
+                                        {% if not is_master %}
+                                            <form method="POST">
+                                                <input type="hidden" name="master_id" value="{{ master.id }}" />
+                                                <button type="submit" class="btn btn-primary">
+                                                    Follow
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

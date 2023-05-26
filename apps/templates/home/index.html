@@ -14,9 +14,9 @@
                     <div class="card-icon">
                         <i class="material-icons">groups</i>
                     </div>
-                    <p class="card-category">Current Master</p>
-                    <h3 class="card-title">49/50
-                        <small>GB</small>
+                    <p class="card-category">{% if is_master %}Followers{% else %}Current Master{% endif %}</p>
+                    <h3 class="card-title">
+                        {% if is_master %}{{ followers }}{% else %}{{ current_master.user.username }}{% endif %}
                     </h3>
                 </div>
                 <div class="card-footer">
