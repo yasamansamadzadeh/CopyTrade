@@ -69,7 +69,7 @@ def sync_trader(trader):
     sync_accounts(accounts, trader)
 
     if trader.is_master:
-        orders = client.get_orders()['items']  # TODO: handle pagination
+        orders = client.get_orders(status='active')['items']  # TODO: handle pagination
         sync_orders(orders, trader)
 
     trader.kc_last_sync = timezone.now()
