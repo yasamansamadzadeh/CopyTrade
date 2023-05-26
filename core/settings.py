@@ -92,8 +92,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTH_USER_MODEL = 'myauth.User'
 
 # Internationalization
-
-LANGUAGE_CODE = config('LANGUAGE')
+LANGUAGE_CODE = config('SITE_LANGUAGE')
 TIME_ZONE = config('TIMEZONE')
 
 USE_I18N = True
