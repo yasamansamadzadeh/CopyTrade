@@ -20,4 +20,4 @@ class AccountAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('__str__', 'status')

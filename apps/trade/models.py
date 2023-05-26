@@ -53,7 +53,13 @@ class Account(models.Model):
 
 
 class Order(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'ACTIVE', _('active')
+        DONE = 'DONE', _('done')
+        CANCELLED = 'CANCELLED', _('cancelled')
+
     trader = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='orders')
+    status = models.CharField(max_length=63, choices=Status.choices, default=Status.ACTIVE)
     kc_id = models.CharField(max_length=24, unique=True)
     kc_created_at = models.DateTimeField()
     src_currency = models.CharField(max_length=63)
