@@ -53,9 +53,9 @@ def sync_orders(orders, trader):
             order.save()
 
     for order in Order.objects.filter(trader=trader, status=Order.Status.ACTIVE):
-        order_data = filter(lambda o: o['id'] == order.kc_id, orders)
+        order_data = list(filter(lambda o: o['id'] == order.kc_id, orders))
         if not order_data:
-            order.status = Order.Status.DONE
+            order.status = Order.Status.CANCELLED
 
             # TODO: close position, reflect to all slaves
 
