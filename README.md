@@ -101,10 +101,10 @@ Within the download you'll find the following directories and files:
    |    |    |-- views.py                  # Serve HTML pages for authenticated users
    |    |    |-- urls.py                   # Define some super simple routes  
    |    |
-   |    |-- auth/                # Handles auth routes (login and register)
-   |    |    |-- urls.py                   # Define auth routes  
+   |    |-- myauth/                # Handles myauth routes (login and register)
+   |    |    |-- urls.py                   # Define myauth routes  
    |    |    |-- views.py                  # Handles login and registration  
-   |    |    |-- forms.py                  # Define auth forms (login and register) 
+   |    |    |-- forms.py                  # Define myauth forms (login and register) 
    |    |
    |    |-- static/
    |    |    |-- <css, JS, images>         # CSS files, Javascripts files
