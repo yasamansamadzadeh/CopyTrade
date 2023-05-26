@@ -12,7 +12,15 @@ from django.urls import reverse
 
 @login_required(login_url="/login/")
 def index(request):
-    context = {'segment': 'index'}
+    accounts = {}
+    if hasattr(request.user, 'trader'):
+        for account in request.user.trader.accounts.all():
+            accounts[account.type] = accounts.get(account.type, []) + [account]
+
+    context = {
+        'segment': 'index',
+        'accounts': accounts,
+    }
 
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
