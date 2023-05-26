@@ -9,6 +9,7 @@ from .models import User
 from django.core.exceptions import ValidationError
 
 from apps.trade.services import validate_kucoin_credentials
+from ..trade.models import Trader
 
 
 class LoginForm(forms.Form):
@@ -100,6 +101,11 @@ class SignUpForm(UserCreationForm):
             )
         except ValueError as e:
             raise ValidationError("Invalid KuCoin credentials") from e
+
+    def clean_key(self):
+        key = self.cleaned_data.get('key')
+        if key and Trader.objects.filter(kc_key=key).exists():
+            raise ValidationError("Key already exists")
 
     class Meta:
         model = User
