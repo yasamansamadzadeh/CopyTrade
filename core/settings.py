@@ -4,6 +4,7 @@ import os
 from decouple import config
 from unipath import Path
 from dj_database_url import parse as db_url
+from datetime import timedelta
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = Path(__file__).parent
@@ -114,3 +115,5 @@ STATICFILES_DIRS = (
 # Celery
 CELERY_BROKER_URL = config('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = 'django-db'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_RESULT_EXPIRES = timedelta(days=1)
