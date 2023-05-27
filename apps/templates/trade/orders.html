@@ -1,0 +1,64 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} UI Tables {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header card-header-tabs card-header-primary">
+                    <div class="nav-tabs-navigation">
+                        <div class="nav-tabs-wrapper">
+                            <span class="nav-tabs-title">Orders:</span>
+                            <ul class="nav nav-tabs" data-tabs="tabs">
+                                {% for status in orders %}
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}"
+                                           href="#{{ status }}" data-toggle="tab">
+                                            {{ status }}
+                                            <div class="ripple-container"></div>
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        {% for status, order_set in orders.items %}
+                            <div class="tab-pane {% if forloop.counter == 1 %}active{% endif %}" id="{{ status }}">
+                                <table class="table">
+                                    <thead>
+                                    <th>Source currency</th>
+                                    <th>Dest currency</th>
+                                    <th>price</th>
+                                    <th>size</th>
+                                    </thead>
+                                    <tbody>
+                                    {% for order in order_set %}
+                                        <tr>
+                                            <td>{{ order.src_currency }}</td>
+                                            <td>{{ order.dst_currency }}</td>
+                                            <td>{{ order.price }}</td>
+                                            <td>{{ order.size }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

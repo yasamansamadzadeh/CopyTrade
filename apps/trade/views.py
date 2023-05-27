@@ -9,7 +9,6 @@ from apps.trade.models import Trader, Follow
 @csrf_exempt
 @login_required(login_url="/login/")
 def masters(request):
-
     context = {
         'segment': 'masters',
         'masters': Trader.objects.filter(is_master=True),
@@ -23,4 +22,20 @@ def masters(request):
         Follow.objects.create(master=master, slave=request.user.trader)
 
     html_template = loader.get_template('trade/masters.html')
+    return HttpResponse(html_template.render(context, request))
+
+
+@login_required(login_url="/login/")
+def orders(request):
+    orders = {}
+    if hasattr(request.user, 'trader'):
+        for order in request.user.trader.orders.all():
+            orders[order.status] = orders.get(order.status, []) + [order]
+
+    context = {
+        'segment': 'orders',
+        'orders': orders,
+    }
+
+    html_template = loader.get_template('trade/orders.html')
     return HttpResponse(html_template.render(context, request))
