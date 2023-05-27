@@ -19,13 +19,14 @@ def index(request):
         for account in request.user.trader.accounts.all():
             accounts[account.type] = accounts.get(account.type, []) + [account]
 
-    follow = Follow.objects.filter(slave=request.user.trader).first()
+    follow = Follow.objects.filter(slave__user=request.user).first()
 
     context = {
         'segment': 'index',
         'accounts': accounts,
+        'is_trader': hasattr(request.user, 'trader'),
         'is_master': hasattr(request.user, 'trader') and request.user.trader.is_master,
-        'followers': Follow.objects.filter(master=request.user.trader).count(),
+        'followers': Follow.objects.filter(master__user=request.user).count(),
         'current_master': follow.master if follow else None,
     }
 
