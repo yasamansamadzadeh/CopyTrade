@@ -21,7 +21,7 @@ class Trader(models.Model):
 
 class Follow(models.Model):
     master = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='followers')
-    slave = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='followings', unique=True)
+    slave = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='followings')
 
     class Meta:
         verbose_name = _('following')

@@ -18,8 +18,8 @@ def masters(request):
     if request.method == 'POST':
         master_id = request.POST.dict()['master_id']
         master = Trader.objects.get(id=master_id)
-        Follow.objects.filter(slave=request.user.trader).delete()
-        Follow.objects.create(master=master, slave=request.user.trader)
+        if not Follow.objects.filter(master=master, slave=request.user.trader).exists():
+            Follow.objects.create(master=master, slave=request.user.trader)
 
     html_template = loader.get_template('trade/masters.html')
     return HttpResponse(html_template.render(context, request))
