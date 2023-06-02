@@ -98,7 +98,7 @@ class SignUpForm(UserCreationForm):
                 cleaned_data.get('key'),
                 cleaned_data.get('secret'),
                 cleaned_data.get('passphrase'),
-                not cleaned_data.get('master'),
+                # not cleaned_data.get('master'),
             )
         except ValueError as e:
             raise ValidationError(str(e)) from e

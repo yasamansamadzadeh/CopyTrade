@@ -11,6 +11,9 @@ class Trader(models.Model):
     kc_passphrase = models.CharField(max_length=32)
     kc_last_sync = models.DateTimeField(null=True, blank=True)
 
+    kc_spot_access = models.BooleanField(default=False)
+    kc_margin_access = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = _('trader')
         verbose_name_plural = _('traders')

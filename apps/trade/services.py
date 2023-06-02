@@ -2,6 +2,7 @@ from .models import Trader, Account, Order
 from django.db.models import F
 from django.utils import timezone
 from kucoin.client import Client
+from kucoin.utils import flat_uuid
 from kucoin.exceptions import KucoinAPIException
 import datetime
 
@@ -17,11 +18,48 @@ def validate_kucoin_credentials(key, secret, passphrase, write_access=False):
     except KucoinAPIException as e:
         if e.code in ['400003', '400004', '400005']:
             raise ValueError('Invalid Kucoin Credentials')
-        elif e.code in ['400007']:
-            if write_access:
-                raise ValueError('Invalid Kucoin Permissions')
-        elif e.code not in ['900001']:
-            raise ValueError('Unexpected Error Occurred')
+        # elif e.code in ['400007']:
+        #     if write_access:
+        #         raise ValueError('Invalid Kucoin Permissions')
+        # elif e.code not in ['900001']:
+        #     raise ValueError('Unexpected Error Occurred')
+
+
+def create_trader(user, is_master, key, secret, passphrase):
+    trader = Trader(
+        user=user,
+        is_master=is_master,
+        kc_key=key,
+        kc_secret=secret,
+        kc_passphrase=passphrase,
+    )
+
+    client = Client(key, secret, passphrase)
+
+    try:
+        client.create_limit_order(
+            symbol='FOO-BAR',
+            side='sell',
+            price='10',
+            size='10',
+        )
+    except KucoinAPIException as e:
+        if e.code in ['900001']:
+            trader.kc_spot_access = True
+
+    try:
+        client._post('margin/order', True, data=dict(
+            clientOid=flat_uuid(),
+            symbol='FOO-BAR',
+            side='sell',
+            price='10',
+            size='10',
+        ))
+    except KucoinAPIException as e:
+        if e.code in ['400312']:
+            trader.kc_margin_access = True
+
+    trader.save()
 
 
 def sync_accounts(accounts, trader):
