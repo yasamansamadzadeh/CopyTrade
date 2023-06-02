@@ -6,11 +6,22 @@ from kucoin.exceptions import KucoinAPIException
 import datetime
 
 
-def validate_kucoin_credentials(key, secret, passphrase):
+def validate_kucoin_credentials(key, secret, passphrase, write_access=False):
     try:
-        Client(key, secret, passphrase).get_accounts()
+        Client(key, secret, passphrase).create_limit_order(
+            symbol='FOO-BAR',
+            side='sell',
+            price='10',
+            size='10',
+        )
     except KucoinAPIException as e:
-        raise ValueError('Invalid credentials') from e
+        if e.code in ['400003', '400004', '400005']:
+            raise ValueError('Invalid Kucoin Credentials')
+        elif e.code in ['400007']:
+            if write_access:
+                raise ValueError('Invalid Kucoin Permissions')
+        elif e.code not in ['900001']:
+            raise ValueError('Unexpected Error Occurred')
 
 
 def sync_accounts(accounts, trader):

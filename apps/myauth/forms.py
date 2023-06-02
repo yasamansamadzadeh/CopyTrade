@@ -98,9 +98,10 @@ class SignUpForm(UserCreationForm):
                 cleaned_data.get('key'),
                 cleaned_data.get('secret'),
                 cleaned_data.get('passphrase'),
+                not cleaned_data.get('master'),
             )
         except ValueError as e:
-            raise ValidationError("Invalid KuCoin credentials") from e
+            raise ValidationError(str(e)) from e
 
     def clean_key(self):
         key = self.cleaned_data.get('key')
