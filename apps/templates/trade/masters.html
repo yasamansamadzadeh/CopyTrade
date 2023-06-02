@@ -37,12 +37,23 @@
                                     </td>
                                     <td>
                                         {% if not is_master %}
-                                            <form method="POST">
-                                                <input type="hidden" name="master_id" value="{{ master.id }}" />
-                                                <button type="submit" class="btn btn-primary">
-                                                    Follow
-                                                </button>
-                                            </form>
+                                            {% if not master.is_followed %}
+                                                <form method="POST">
+                                                    <input type="hidden" name="master_id" value="{{ master.id }}"/>
+                                                    <input type="hidden" name="action" value="follow" />
+                                                    <button type="submit" class="btn btn-primary">
+                                                        Follow
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <form method="POST">
+                                                    <input type="hidden" name="master_id" value="{{ master.id }}"/>
+                                                    <input type="hidden" name="action" value="unfollow" />
+                                                    <button type="submit" class="btn btn-primary">
+                                                        Unfollow
+                                                    </button>
+                                                </form>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                 </tr>
