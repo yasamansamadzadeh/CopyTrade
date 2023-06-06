@@ -1,10 +1,13 @@
 from .models import Trader, Account, Order
 from django.db.models import F
 from django.utils import timezone
-from kucoin.client import Client
-from kucoin.utils import flat_uuid
-from kucoin.exceptions import KucoinAPIException
+from kucoin.client import Trade as Client
 import datetime
+import json
+
+
+def get_kucoin_api_error_code(e: Exception):
+    return json.loads('-'.join(str(e).split('-')[1:])).get('code', '85000')
 
 
 def validate_kucoin_credentials(key, secret, passphrase, write_access=False):
@@ -15,14 +18,10 @@ def validate_kucoin_credentials(key, secret, passphrase, write_access=False):
             price='10',
             size='10',
         )
-    except KucoinAPIException as e:
-        if e.code in ['400003', '400004', '400005']:
+    except Exception as e:
+        code = get_kucoin_api_error_code(e)
+        if code in ['400003', '400004', '400005']:
             raise ValueError('Invalid Kucoin Credentials')
-        # elif e.code in ['400007']:
-        #     if write_access:
-        #         raise ValueError('Invalid Kucoin Permissions')
-        # elif e.code not in ['900001']:
-        #     raise ValueError('Unexpected Error Occurred')
 
 
 def create_trader(user, is_master, key, secret, passphrase):
@@ -43,20 +42,21 @@ def create_trader(user, is_master, key, secret, passphrase):
             price='10',
             size='10',
         )
-    except KucoinAPIException as e:
-        if e.code in ['900001']:
+    except Exception as e:
+        code = get_kucoin_api_error_code(e)
+        if code in ['900001']:
             trader.kc_spot_access = True
 
     try:
-        client._post('margin/order', True, data=dict(
-            clientOid=flat_uuid(),
+        client.create_limit_margin_order(
             symbol='FOO-BAR',
             side='sell',
             price='10',
             size='10',
-        ))
-    except KucoinAPIException as e:
-        if e.code in ['400312']:
+        )
+    except Exception as e:
+        code = get_kucoin_api_error_code(e)
+        if code in ['400312']:
             trader.kc_margin_access = True
 
     trader.save()
@@ -114,11 +114,11 @@ def sync_orders(orders, trader):
 def sync_trader(trader):
     client = Client(trader.kc_key, trader.kc_secret, trader.kc_passphrase)
 
-    accounts = client.get_accounts()
+    accounts = client._request('GET', '/api/v1/accounts', params={})
     sync_accounts(accounts, trader)
 
     if trader.is_master:
-        orders = client.get_orders(status='active')['items']  # TODO: handle pagination
+        orders = client.get_order_list(status='active')['items']  # TODO: handle pagination
         sync_orders(orders, trader)
 
     trader.kc_last_sync = timezone.now()
