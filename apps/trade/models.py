@@ -62,6 +62,7 @@ class Order(models.Model):
         CANCELLED = 'CANCELLED', _('cancelled')
 
     trader = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='orders')
+    origin = models.ForeignKey('Order', on_delete=models.CASCADE, related_name='copies', blank=True, null=True)
     status = models.CharField(max_length=63, choices=Status.choices, default=Status.ACTIVE)
     kc_id = models.CharField(max_length=24, unique=True)
     kc_created_at = models.DateTimeField()
