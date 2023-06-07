@@ -61,6 +61,10 @@ class Order(models.Model):
         DONE = 'DONE', _('done')
         CANCELLED = 'CANCELLED', _('cancelled')
 
+    class Side(models.TextChoices):
+        SELL = 'sell', _('sell')
+        BUY = 'buy', _('buy')
+
     trader = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='orders')
     origin = models.ForeignKey('Order', on_delete=models.CASCADE, related_name='copies', blank=True, null=True)
     status = models.CharField(max_length=63, choices=Status.choices, default=Status.ACTIVE)
@@ -69,6 +73,7 @@ class Order(models.Model):
     src_currency = models.CharField(max_length=63)
     dst_currency = models.CharField(max_length=63)
     price = models.FloatField()
+    side = models.CharField(max_length=15, choices=Side.choices)
     size = models.FloatField()
 
     class Meta:
