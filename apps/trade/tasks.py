@@ -1,10 +1,11 @@
 from celery import shared_task
-from .services import sync_traders, process_master_order, update_master_balance
+from .services import sync_traders, process_master_order, update_master_balance, update_currencies_from_kucoin
 
 
 @shared_task
 def sync_kucoin():
     sync_traders()
+    update_currencies_from_kucoin()
 
 
 @shared_task

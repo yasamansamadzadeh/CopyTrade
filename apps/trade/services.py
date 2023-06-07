@@ -1,9 +1,13 @@
 from .models import Trader, Account, Order, Follow
-from django.db.models import F, OuterRef, Exists, Subquery
+from django.db.models import F, OuterRef, Exists, Subquery, Case, When, Sum
 from django.utils import timezone
-from kucoin.client import Trade as Client
+from kucoin.client import Trade as Client, Market
+from django.conf import settings
 import datetime
 import json
+import redis
+
+redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
 
 
 def get_kucoin_api_error_code(e: Exception):
@@ -208,3 +212,37 @@ def process_master_order(master_id, order_data):
 
 def update_master_balance(master_id, balance_data):
     pass
+
+
+def calculate_profits_by_master(trader):
+    profits = Order.objects.filter(trader=trader, status=Order.Status.DONE, origin__isnull=False).select_related(
+        'origin__trader').annotate(
+        size_change=Case(
+            When(side=Order.Side.SELL, then=-F('size')),
+            When(side=Order.Side.BUY, then=F('size')),
+        ),
+        price_change=Case(
+            When(side=Order.Side.SELL, then=F('price')),
+            When(side=Order.Side.BUY, then=-F('price')),
+        ),
+    ).values('origin__trader', 'origin__trader__user__username', 'src_currency', 'dst_currency').annotate(
+        total_size_change=Sum('size_change'),
+        total_price_change=Sum('price_change'),
+    )
+
+    return [{
+        'trader_id': row['origin__trader'],
+        'trader_username': row['origin__trader__user__username'],
+        'src_currency': row['src_currency'],
+        'dst_currency': row['dst_currency'],
+        'total_size_change': row['total_size_change'],
+        'total_price_change': row['total_price_change'],
+        'total_usd_change': row['total_size_change'] * float(redis_client.get('symbol:'+row['src_currency'])) + row[
+            'total_price_change'] * float(redis_client.get('symbol:'+row['dst_currency']))
+    } for row in profits]
+
+
+def update_currencies_from_kucoin():
+    client = Market()
+    prices = client._request('GET', '/api/v1/prices', params={'base': 'USD'})
+    redis_client.mset({'symbol:' + symbol: float(price) for symbol, price in prices.items()})

@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
+from apps.trade.services import calculate_profits_by_master
 
 from apps.trade.models import Follow
 
@@ -15,15 +16,19 @@ from apps.trade.models import Follow
 @login_required(login_url="/login/")
 def index(request):
     accounts = {}
+    profits = {}
     if hasattr(request.user, 'trader'):
         for account in request.user.trader.accounts.all():
             accounts[account.type] = accounts.get(account.type, []) + [account]
+        for profit in calculate_profits_by_master(request.user.trader):
+            profits[profit['trader_username']] = profits.get(profit['trader_username'], []) + [profit]
 
     follow = Follow.objects.filter(slave__user=request.user).first()
 
     context = {
         'segment': 'index',
         'accounts': accounts,
+        'profits': profits,
         'is_trader': hasattr(request.user, 'trader'),
         'is_master': hasattr(request.user, 'trader') and request.user.trader.is_master,
         'followers': Follow.objects.filter(master__user=request.user).count(),

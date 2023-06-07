@@ -85,6 +85,53 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header card-header-tabs card-header-primary">
+                    <div class="nav-tabs-navigation">
+                        <div class="nav-tabs-wrapper">
+                            <span class="nav-tabs-title">Profits:</span>
+                            <ul class="nav nav-tabs" data-tabs="tabs">
+                                {% for master in profits %}
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}"
+                                           href="#{{ master }}" data-toggle="tab">
+                                            {{ master }}
+                                            <div class="ripple-container"></div>
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        {% for master, profit_list in profits.items %}
+                            <div class="tab-pane {% if forloop.counter == 1 %}active{% endif %}" id="{{ master }}">
+                                <table class="table">
+                                    <thead>
+                                    <th>base currency</th>
+                                    <th>quote currency</th>
+                                    <th>usd change</th>
+                                    </thead>
+                                    <tbody>
+                                    {% for profit in profit_list %}
+                                        <tr>
+                                            <td>{{ profit.src_currency }}</td>
+                                            <td>{{ profit.dst_currency }}</td>
+                                            <td>{{ profit.total_usd_change }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
 {% endblock content %}
