@@ -6,21 +6,25 @@ from ...models import Trader
 from ...tasks import dispatch_order, update_balance
 
 
+def get_order_callback(trader_id):
+    async def deal_msg(msg):
+        topic = msg['topic']
+        if topic == '/spotMarket/tradeOrders':
+            dispatch_order.delay(trader_id, msg['data'])
+        if topic == '/account/balance':
+            update_balance.delay(trader_id, msg['data'])
+
+    return deal_msg
+
+
 class Command(BaseCommand):
     help = "Runs websocket listeners for master trading orders"
 
     async def main(self):
-        async for trader in Trader.objects.all():
-            async def deal_msg(msg):
-                topic = msg['topic']
-                if topic == '/spotMarket/tradeOrders':
-                    dispatch_order.delay(trader.id, msg['data'])
-                if topic == '/account/balance':
-                    update_balance.delay(trader.id, msg['data'])
-
+        async for trader in Trader.objects.filter(is_master=True):
             client = WsToken(key=trader.kc_key, secret=trader.kc_secret,
                              passphrase=trader.kc_passphrase)
-            ws_client = await KucoinWsClient.create(None, client, deal_msg, private=True)
+            ws_client = await KucoinWsClient.create(None, client, get_order_callback(trader.id), private=True)
             await ws_client.subscribe('/spotMarket/tradeOrders')
             await ws_client.subscribe('/account/balance')
 

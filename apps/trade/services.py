@@ -142,8 +142,11 @@ def sync_traders():
 def cancel_order(kc_id):
     Order.objects.filter(kc_id=kc_id).update(status=Order.Status.CANCELLED)
     for order in Order.objects.filter(origin__kc_id=kc_id).select_related('trader'):
-        client = Client(order.trader.kc_key, order.trader.kc_secret, order.trader.kc_passphrase)
-        client.cancel_order(kc_id)
+        try:
+            client = Client(order.trader.kc_key, order.trader.kc_secret, order.trader.kc_passphrase)
+            client.cancel_order(order.kc_id)
+        except Exception as e:
+            print(e)
         order.status = Order.Status.CANCELLED
         order.save()
 
@@ -155,20 +158,24 @@ def create_order(trader_id, order_data):
         kc_created_at=timezone.make_aware(datetime.datetime.fromtimestamp(int(order_data['orderTime'] / 1000))),
         src_currency=order_data['symbol'].split('-')[0],
         dst_currency=order_data['symbol'].split('-')[1],
-        price=order_data['price'],
-        size=order_data['size'],
+        price=float(order_data['price']),
+        size=float(order_data['size']),
+        side=order_data['side'],
     )
 
-    master_account = Account.objects.get(trader_id=trader_id, currency=order.src_currency)
-    ratio = order.size / (order.size + master_account.available)
+    master_account = Account.objects.get(trader_id=trader_id, currency=order.src_currency, type='trade')
+    # ratio = order.size / (order.size + master_account.available)
+    ratio = order.size / master_account.available
+
+    account_query = Account.objects.filter(trader_id=OuterRef('pk'), currency=order.src_currency)
 
     slaves = Trader.objects.annotate(
         is_followed=Exists(Follow.objects.filter(master_id=trader_id, slave=OuterRef('pk'))),
-        my_account=Subquery(Account.objects.get(trader_id=OuterRef('pk'), currency=order.src_currency)),
+        my_account_available=Subquery(account_query.values("available")[:1]),
     ).filter(is_followed=True)
 
     for slave in slaves:
-        size = ratio * slave.my_account.available
+        size = ratio * slave.my_account_available
 
         if not size:
             continue
@@ -178,18 +185,20 @@ def create_order(trader_id, order_data):
             res = client.create_limit_order(
                 symbol="%s-%s" % (order.src_currency, order.dst_currency),
                 side=order_data['side'],
-                size=size,
-                price=order.price,
+                size='{:.8f}'.format(size).rstrip('0'),
+                price='{:20.1f}'.format(order.price).lstrip(),
             )
 
             Order.objects.create(
-                trader_id=slave,
+                trader=slave,
                 kc_id=res['orderId'],
                 kc_created_at=timezone.now(),
                 src_currency=order.src_currency,
                 dst_currency=order.dst_currency,
                 price=order.price,
                 size=size,
+                side=order_data['side'],
+                origin=order,
             )
         except Exception as e:
             print(e)
