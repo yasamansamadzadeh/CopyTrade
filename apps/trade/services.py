@@ -1,5 +1,5 @@
 from .models import Trader, Account, Order, Follow
-from django.db.models import F, OuterRef, Exists, Subquery, Case, When, Sum
+from django.db.models import F, OuterRef, Exists, Subquery, Case, When, Sum, Q
 from django.utils import timezone
 from kucoin.client import Trade as Client, Market
 from django.conf import settings
@@ -169,8 +169,12 @@ def create_order(trader_id, order_data):
 
     account_query = Account.objects.filter(trader_id=OuterRef('pk'), currency=order.src_currency)
 
+    follow_filter = Q(master_id=trader_id) & Q(slave=OuterRef('pk')) & (
+            Q(symbol=order_data['symbol']) | Q(symbol__isnull=True))
+    follow_query = Follow.objects.filter(follow_filter)
+
     slaves = Trader.objects.annotate(
-        is_followed=Exists(Follow.objects.filter(master_id=trader_id, slave=OuterRef('pk'))),
+        is_followed=Exists(follow_query),
         my_account_available=Subquery(account_query.values("available")[:1]),
     ).filter(is_followed=True)
 

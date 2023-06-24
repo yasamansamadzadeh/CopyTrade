@@ -25,13 +25,14 @@ class Trader(models.Model):
 class Follow(models.Model):
     master = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='followers')
     slave = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='followings')
+    symbol = models.CharField(max_length=127, null=True, blank=True)
 
     class Meta:
         verbose_name = _('following')
         verbose_name_plural = _('followings')
         constraints = (
-            models.UniqueConstraint(fields=('master', 'slave'),
-                                    name='trade_follow_master_slave_uniq'),
+            models.UniqueConstraint(fields=('master', 'slave', 'symbol'),
+                                    name='trade_follow_master_slave_symbol_uniq'),
         )
 
     def __str__(self):
