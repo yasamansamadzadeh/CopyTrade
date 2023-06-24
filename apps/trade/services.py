@@ -152,6 +152,9 @@ def cancel_order(kc_id):
 
 
 def create_order(trader_id, order_data):
+    src_usd = redis_client.get('symbol:'+order_data['symbol'].split('-')[0])
+    dst_usd = redis_client.get('symbol:' + order_data['symbol'].split('-')[1])
+
     order = Order.objects.create(
         trader_id=trader_id,
         kc_id=order_data['orderId'],
@@ -161,6 +164,8 @@ def create_order(trader_id, order_data):
         price=float(order_data['price']),
         size=float(order_data['size']),
         side=order_data['side'],
+        src_usd=src_usd,
+        dst_usd=dst_usd,
     )
 
     master_account = Account.objects.get(trader_id=trader_id, currency=order.src_currency, type='trade')
@@ -203,6 +208,8 @@ def create_order(trader_id, order_data):
                 size=size,
                 side=order_data['side'],
                 origin=order,
+                src_usd=src_usd,
+                dst_usd=dst_usd,
             )
         except Exception as e:
             print(e)

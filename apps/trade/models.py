@@ -76,6 +76,8 @@ class Order(models.Model):
     price = models.FloatField()
     side = models.CharField(max_length=15, choices=Side.choices)
     size = models.FloatField()
+    src_usd = models.FloatField()
+    dst_usd = models.FloatField()
 
     class Meta:
         verbose_name = _('order')
