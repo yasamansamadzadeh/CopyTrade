@@ -168,11 +168,15 @@ def create_order(trader_id, order_data):
         dst_usd=dst_usd,
     )
 
-    master_account = Account.objects.get(trader_id=trader_id, currency=order.src_currency, type='trade')
+    if order.side == Order.Side.SELL:
+        master_account = Account.objects.get(trader_id=trader_id, currency=order.src_currency, type='trade')
+        ratio = order.size / master_account.available
+        account_query = Account.objects.filter(trader_id=OuterRef('pk'), currency=order.src_currency)
+    else:
+        master_account = Account.objects.get(trader_id=trader_id, currency=order.dst_currency, type='trade')
+        ratio = (order.size * order.price) / master_account.available
+        account_query = Account.objects.filter(trader_id=OuterRef('pk'), currency=order.dst_currency)
     # ratio = order.size / (order.size + master_account.available)
-    ratio = order.size / master_account.available
-
-    account_query = Account.objects.filter(trader_id=OuterRef('pk'), currency=order.src_currency)
 
     follow_filter = Q(master_id=trader_id) & Q(slave=OuterRef('pk')) & (
             Q(symbol=order_data['symbol']) | Q(symbol__isnull=True))
@@ -184,7 +188,10 @@ def create_order(trader_id, order_data):
     ).filter(is_followed=True)
 
     for slave in slaves:
-        size = ratio * slave.my_account_available
+        if order.side == Order.Side.SELL:
+            size = ratio * slave.my_account_available
+        else:
+            size = ratio * slave.my_account_available / order.price
 
         if not size:
             continue
@@ -194,7 +201,7 @@ def create_order(trader_id, order_data):
             res = client.create_limit_order(
                 symbol="%s-%s" % (order.src_currency, order.dst_currency),
                 side=order_data['side'],
-                size='{:.8f}'.format(size).rstrip('0'),
+                size='{:.7f}'.format(size).rstrip('0'),
                 price='{:20.1f}'.format(order.price).lstrip(),
             )
 
@@ -234,16 +241,19 @@ def update_master_balance(master_id, balance_data):
     pass
 
 
-def calculate_profits_by_master(trader):
-    profits = Order.objects.filter(trader=trader, status=Order.Status.DONE, origin__isnull=False).select_related(
+def calculate_profits_by_master(trader, date=None):
+    qfilter = Q(trader=trader) & Q(status=Order.Status.DONE) & Q(origin__isnull=False)
+    if date:
+        qfilter = qfilter & Q(kc_created_at__gte=date)
+    profits = Order.objects.filter(qfilter).select_related(
         'origin__trader').annotate(
         size_change=Case(
-            When(side=Order.Side.SELL, then=-F('size')),
-            When(side=Order.Side.BUY, then=F('size')),
+            When(side=Order.Side.SELL, then=-(F('size') * F('src_usd'))),
+            When(side=Order.Side.BUY, then=(F('size') * F('src_usd'))),
         ),
         price_change=Case(
-            When(side=Order.Side.SELL, then=F('price')),
-            When(side=Order.Side.BUY, then=-F('price')),
+            When(side=Order.Side.SELL, then=(F('price') * F('size') * F('dst_usd'))),
+            When(side=Order.Side.BUY, then=-(F('price') * F('size') * F('dst_usd'))),
         ),
     ).values('origin__trader', 'origin__trader__user__username', 'src_currency', 'dst_currency').annotate(
         total_size_change=Sum('size_change'),
@@ -257,8 +267,7 @@ def calculate_profits_by_master(trader):
         'dst_currency': row['dst_currency'],
         'total_size_change': row['total_size_change'],
         'total_price_change': row['total_price_change'],
-        'total_usd_change': row['total_size_change'] * float(redis_client.get('symbol:'+row['src_currency'])) + row[
-            'total_price_change'] * float(redis_client.get('symbol:'+row['dst_currency']))
+        'total_usd_change': row['total_size_change'] + row['total_price_change']
     } for row in profits]
 
 

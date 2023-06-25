@@ -8,6 +8,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
+from django.utils import timezone
+from datetime import datetime
 from apps.trade.services import calculate_profits_by_master
 
 from apps.trade.models import Follow
@@ -17,10 +19,13 @@ from apps.trade.models import Follow
 def index(request):
     accounts = {}
     profits = {}
+    date = None
     if hasattr(request.user, 'trader'):
         for account in request.user.trader.accounts.all():
             accounts[account.type] = accounts.get(account.type, []) + [account]
-        for profit in calculate_profits_by_master(request.user.trader):
+        if request.GET.get('from_date', None):
+            date = timezone.make_aware(datetime.strptime(request.GET['from_date'], "%Y-%m-%d")).date()
+        for profit in calculate_profits_by_master(request.user.trader, date):
             profits[profit['trader_username']] = profits.get(profit['trader_username'], []) + [profit]
 
     follow = Follow.objects.filter(slave__user=request.user).first()
@@ -33,6 +38,7 @@ def index(request):
         'is_master': hasattr(request.user, 'trader') and request.user.trader.is_master,
         'followers': Follow.objects.filter(master__user=request.user).count(),
         'current_master': follow.master if follow else None,
+        'date': request.GET.get('from_date', None),
     }
 
     html_template = loader.get_template('home/index.html')

@@ -8,13 +8,13 @@
 {% block content %}
 
     {% if not is_trader %}
-    <div class="alert alert-warning">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <i class="material-icons">close</i>
-        </button>
-        <span>
+        <div class="alert alert-warning">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <i class="material-icons">close</i>
+            </button>
+            <span>
               <b> Warning - </b> You are not logged-in as a trader! </span>
-    </div>
+        </div>
     {% endif %}
     <div class="row">
         <div class="col-12">
@@ -89,7 +89,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header card-header-tabs card-header-primary">
-                    <div class="nav-tabs-navigation">
+                    <div class="nav-tabs-navigation d-flex flex-row align-items-center justify-content-between">
                         <div class="nav-tabs-wrapper">
                             <span class="nav-tabs-title">Profits:</span>
                             <ul class="nav nav-tabs" data-tabs="tabs">
@@ -104,6 +104,19 @@
                                 {% endfor %}
                             </ul>
                         </div>
+                        <form method="get" class="d-flex flex-row align-items-center">
+
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label class="bmd-label-floating">From date</label>
+                                        <input name="from_date" type="text" class="form-control" placeholder="start date" {% if date %}value="{{ date }}"{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary pull-left">Filter</button>
+                        </form>
                     </div>
                 </div>
                 <div class="card-body">
@@ -121,7 +134,7 @@
                                         <tr>
                                             <td>{{ profit.src_currency }}</td>
                                             <td>{{ profit.dst_currency }}</td>
-                                            <td>{{ profit.total_usd_change }}</td>
+                                            <td>{{ profit.total_usd_change|floatformat:4 }}</td>
                                         </tr>
                                     {% endfor %}
                                     </tbody>
