@@ -248,12 +248,12 @@ def calculate_profits_by_master(trader, date=None):
     profits = Order.objects.filter(qfilter).select_related(
         'origin__trader').annotate(
         size_change=Case(
-            When(side=Order.Side.SELL, then=-(F('size') * F('src_usd'))),
-            When(side=Order.Side.BUY, then=(F('size') * F('src_usd'))),
+            When(side=Order.Side.SELL, then=-F('size')),
+            When(side=Order.Side.BUY, then=F('size')),
         ),
         price_change=Case(
-            When(side=Order.Side.SELL, then=(F('price') * F('size') * F('dst_usd'))),
-            When(side=Order.Side.BUY, then=-(F('price') * F('size') * F('dst_usd'))),
+            When(side=Order.Side.SELL, then=(F('price') * F('size'))),
+            When(side=Order.Side.BUY, then=-(F('price') * F('size'))),
         ),
     ).values('origin__trader', 'origin__trader__user__username', 'src_currency', 'dst_currency').annotate(
         total_size_change=Sum('size_change'),
@@ -267,7 +267,8 @@ def calculate_profits_by_master(trader, date=None):
         'dst_currency': row['dst_currency'],
         'total_size_change': row['total_size_change'],
         'total_price_change': row['total_price_change'],
-        'total_usd_change': row['total_size_change'] + row['total_price_change']
+        'total_usd_change': row['total_size_change'] * float(redis_client.get('symbol:' + row['src_currency'])) + row[
+            'total_price_change'] * float(redis_client.get('symbol:' + row['dst_currency']))
     } for row in profits]
 
 
