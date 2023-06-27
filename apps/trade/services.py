@@ -1,5 +1,5 @@
 from .models import Trader, Account, Order, Follow, FollowSymbol
-from django.db.models import F, OuterRef, Exists, Subquery, Case, When, Sum, Q
+from django.db.models import F, OuterRef, Exists, Subquery, Case, When, Sum, Q, Value
 from django.utils import timezone
 from kucoin.client import Trade as Client, Market
 from django.conf import settings
@@ -182,6 +182,7 @@ def check_loss():
         if max_loss[(trader, master)] and profit < -max_loss[(trader, master)]:
             Follow.objects.filter(master=master, slave=trader).delete()
 
+
 def create_order(trader_id, order_data):
     src_usd = redis_client.get('symbol:'+order_data['symbol'].split('-')[0])
     dst_usd = redis_client.get('symbol:' + order_data['symbol'].split('-')[1])
@@ -210,10 +211,14 @@ def create_order(trader_id, order_data):
 
     check_loss()
 
-    followings = Follow.objects.filter(symbols__symbol=order_data['symbol'],
-                                       master_id=trader_id).select_related('slave').annotate(
+    followings = Follow.objects.annotate(has_symbol=Value(True)).filter(symbols__symbol=order_data['symbol'],
+                                                                        master_id=trader_id).select_related(
+        'slave').annotate(
         my_account_available=Subquery(account_query.values("available")[:1]),
-    )
+    ).union(Follow.objects.annotate(has_symbol=Exists(FollowSymbol.objects.filter(follow_id=OuterRef('pk')))).filter(
+        master_id=trader_id, has_symbol=False).select_related('slave').annotate(
+        my_account_available=Subquery(account_query.values("available")[:1]),
+    ))
 
     for following in followings:
         if order.side == Order.Side.SELL:
