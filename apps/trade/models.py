@@ -25,18 +25,24 @@ class Trader(models.Model):
 class Follow(models.Model):
     master = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='followers')
     slave = models.ForeignKey(Trader, on_delete=models.CASCADE, related_name='followings')
-    symbol = models.CharField(max_length=127, null=True, blank=True)
+    max_loss = models.FloatField(blank=True, null=True)
+    max_trading_rate = models.FloatField(blank=True, null=True)
 
     class Meta:
         verbose_name = _('following')
         verbose_name_plural = _('followings')
         constraints = (
-            models.UniqueConstraint(fields=('master', 'slave', 'symbol'),
-                                    name='trade_follow_master_slave_symbol_uniq'),
+            models.UniqueConstraint(fields=('master', 'slave'),
+                                    name='trade_follow_master_slave_uniq'),
         )
 
     def __str__(self):
         return "%s → %s" % (self.slave, self.master)
+
+
+class FollowSymbol(models.Model):
+    follow = models.ForeignKey(Follow, on_delete=models.CASCADE, related_name='symbols')
+    symbol = models.CharField(max_length=127)
 
 
 class Account(models.Model):

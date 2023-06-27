@@ -1,4 +1,4 @@
-from .models import Trader, Account, Order, Follow
+from .models import Trader, Account, Order, Follow, FollowSymbol
 from django.db.models import F, OuterRef, Exists, Subquery, Case, When, Sum, Q
 from django.utils import timezone
 from kucoin.client import Trade as Client, Market
@@ -151,6 +151,37 @@ def cancel_order(kc_id):
         order.save()
 
 
+def check_loss():
+    qfilter = Q(status=Order.Status.DONE) & Q(origin__isnull=False)
+    profits = Order.objects.filter(qfilter).select_related(
+        'origin__trader').annotate(
+        size_change=Case(
+            When(side=Order.Side.SELL, then=-F('size')),
+            When(side=Order.Side.BUY, then=F('size')),
+        ),
+        price_change=Case(
+            When(side=Order.Side.SELL, then=(F('price') * F('size'))),
+            When(side=Order.Side.BUY, then=-(F('price') * F('size'))),
+        ),
+    ).values('trader', 'origin__trader', 'src_currency', 'dst_currency').annotate(
+        total_size_change=Sum('size_change'),
+        total_price_change=Sum('price_change'),
+        max_loss=Subquery(
+            Follow.objects.filter(master=OuterRef('origin__trader'), slave=OuterRef('trader')).values('max_loss')[:1])
+    )
+    total_profits = {}
+    max_loss = {}
+    for profit in profits:
+        total_profits[(profit['trader'], profit['origin__trader'])] = total_profits.get(
+            (profit['trader'], profit['origin__trader']), 0) + profit['total_size_change'] * float(
+            redis_client.get('symbol:' + profit['src_currency'])) + profit['total_price_change'] * float(
+            redis_client.get('symbol:' + profit['dst_currency']))
+        max_loss[(profit['trader'], profit['origin__trader'])] = profit['max_loss']
+
+    for (trader, master), profit in total_profits.items():
+        if max_loss[(trader, master)] and profit < -max_loss[(trader, master)]:
+            Follow.objects.filter(master=master, slave=trader).delete()
+
 def create_order(trader_id, order_data):
     src_usd = redis_client.get('symbol:'+order_data['symbol'].split('-')[0])
     dst_usd = redis_client.get('symbol:' + order_data['symbol'].split('-')[1])
@@ -171,33 +202,30 @@ def create_order(trader_id, order_data):
     if order.side == Order.Side.SELL:
         master_account = Account.objects.get(trader_id=trader_id, currency=order.src_currency, type='trade')
         ratio = order.size / master_account.available
-        account_query = Account.objects.filter(trader_id=OuterRef('pk'), currency=order.src_currency)
+        account_query = Account.objects.filter(trader_id=OuterRef('slave__id'), currency=order.src_currency)
     else:
         master_account = Account.objects.get(trader_id=trader_id, currency=order.dst_currency, type='trade')
         ratio = (order.size * order.price) / master_account.available
-        account_query = Account.objects.filter(trader_id=OuterRef('pk'), currency=order.dst_currency)
-    # ratio = order.size / (order.size + master_account.available)
+        account_query = Account.objects.filter(trader_id=OuterRef('slave__id'), currency=order.dst_currency)
 
-    follow_filter = Q(master_id=trader_id) & Q(slave=OuterRef('pk')) & (
-            Q(symbol=order_data['symbol']) | Q(symbol__isnull=True))
-    follow_query = Follow.objects.filter(follow_filter)
+    check_loss()
 
-    slaves = Trader.objects.annotate(
-        is_followed=Exists(follow_query),
+    followings = Follow.objects.filter(symbols__symbol=order_data['symbol'],
+                                       master_id=trader_id).select_related('slave').annotate(
         my_account_available=Subquery(account_query.values("available")[:1]),
-    ).filter(is_followed=True)
+    )
 
-    for slave in slaves:
+    for following in followings:
         if order.side == Order.Side.SELL:
-            size = ratio * slave.my_account_available
+            size = min((ratio, (following.max_trading_rate or 100) / 100)) * following.my_account_available
         else:
-            size = ratio * slave.my_account_available / order.price
+            size = min((ratio, (following.max_trading_rate or 100) / 100)) * following.my_account_available / order.price
 
         if not size:
             continue
 
         try:
-            client = Client(slave.kc_key, slave.kc_secret, slave.kc_passphrase)
+            client = Client(following.slave.kc_key, following.slave.kc_secret, following.slave.kc_passphrase)
             res = client.create_limit_order(
                 symbol="%s-%s" % (order.src_currency, order.dst_currency),
                 side=order_data['side'],
@@ -206,7 +234,7 @@ def create_order(trader_id, order_data):
             )
 
             Order.objects.create(
-                trader=slave,
+                trader=following.slave,
                 kc_id=res['orderId'],
                 kc_created_at=timezone.now(),
                 src_currency=order.src_currency,

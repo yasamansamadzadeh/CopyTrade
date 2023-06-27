@@ -8,9 +8,14 @@ class TraderAdmin(admin.ModelAdmin):
     pass
 
 
+class FollowInline(admin.TabularInline):
+    model = FollowSymbol
+    extra = 1
+
+
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
-    pass
+    inlines = (FollowInline, )
 
 
 @admin.register(Account)

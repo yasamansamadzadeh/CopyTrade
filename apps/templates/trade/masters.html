@@ -38,7 +38,10 @@
                                     <td>
                                         {% if not is_master %}
                                             {% if not master.is_followed %}
-                                                <form method="POST">
+                                                <form class="d-flex align-items-center justify-content-end" method="POST">
+                                                    <input name="symbols" type="text" class="form-control" placeholder="ETH-BTC, ETH-USDT, ..." />
+                                                    <input name="max_loss" type="number" class="form-control" placeholder="Max Loss" step="0.0001" min="0" />
+                                                    <input name="max_trading_rate" type="number" class="form-control" placeholder="Max Trading Rate" step="1" min="0" max="100" />
                                                     <input type="hidden" name="master_id" value="{{ master.id }}"/>
                                                     <input type="hidden" name="action" value="follow" />
                                                     <button type="submit" class="btn btn-primary">

@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.template import loader
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.trade.models import Trader, Follow
+from apps.trade.models import Trader, Follow, FollowSymbol
 
 
 @csrf_exempt
@@ -23,7 +23,17 @@ def masters(request):
         master = Trader.objects.get(id=master_id, is_master=True)
         if action == 'follow':
             if not Follow.objects.filter(master=master, slave=request.user.trader).exists():
-                Follow.objects.create(master=master, slave=request.user.trader)
+                follow = Follow()
+                follow.master = master
+                follow.slave = request.user.trader
+                if request.POST.dict()['max_loss']:
+                    follow.max_loss = request.POST.dict()['max_loss']
+                if request.POST.dict()['max_trading_rate']:
+                    follow.max_trading_rate = request.POST.dict()['max_trading_rate']
+                follow.save()
+                if request.POST.dict()['symbols']:
+                    for symbol in request.POST.dict()['symbols'].split(','):
+                        FollowSymbol.objects.create(follow=follow, symbol=symbol.strip())
         elif action == 'unfollow':
             Follow.objects.filter(master=master, slave=request.user.trader).delete()
 
